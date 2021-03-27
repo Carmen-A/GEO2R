@@ -6,7 +6,7 @@ library(limma)
 library(umap)
 
 # load series and platform data from GEO
-
+#cargas los datos del artículo, para después poder enlazarlo con que estas haciendo
 gset <- getGEO("GSE155283", GSEMatrix =TRUE, AnnotGPL=FALSE)
 if (length(gset) > 1) idx <- grep("GPL19485", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
@@ -15,7 +15,7 @@ gset <- gset[[idx]]
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 # group membership for all samples
-gsms <- "000111"
+gsms <- "000111" #3 controles y 3 experimentales
 sml <- strsplit(gsms, split="")[[1]]
 
 # log2 transformation
@@ -23,14 +23,15 @@ ex <- exprs(gset)
 qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
 LogC <- (qx[5] > 100) ||
   (qx[6]-qx[1] > 50 && qx[2] > 0)
-if (LogC) { ex[which(ex <= 0)] <- NaN
+if (LogC) { ex[which(ex <= 2)] <- NaN #aquí cambie lo de logFC
 exprs(gset) <- log2(ex) }
 
 # assign samples to groups and set up design matrix
+#le metes al objeto gs los 2 niveles, de control y expreimental (0,1)
 gs <- factor(sml)
-groups <- make.names(c("control","anti-OSM"))
+groups <- make.names(c("control","anti-OSM")) #le da nombre al 0 y 1
 levels(gs) <- groups
-gset$group <- gs
+gset$group <- gs #aquí acorde a los dos grupos de coontrol y experimental enlazas los datos del artículo
 design <- model.matrix(~group + 0, gset)
 colnames(design) <- levels(gs)
 
@@ -38,14 +39,14 @@ fit <- lmFit(gset, design)  # fit linear model
 
 # set up contrasts of interest and recalculate model coefficients
 cts <- paste(groups[1], groups[2], sep="-")
-cont.matrix <- makeContrasts(contrasts=cts, levels=design)
+cont.matrix <- makeContrasts(contrasts=cts, levels=design) #comparas los grupos
 fit2 <- contrasts.fit(fit, cont.matrix)
 
 # compute statistics and table of top significant genes
-fit2 <- eBayes(fit2, 2)
-tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250)
+fit2 <- eBayes(fit2, 0.01) #usas un análisis de bayes
+tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250) #haces una tabla con los resultades del bayes
 
-tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SPOT_ID"))
+tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SPOT_ID")) #seleccionas los datso que te interesan
 write.table(tT, file=stdout(), row.names=F, sep="\t")
 
 # Visualize and quality control test results.
@@ -56,7 +57,7 @@ hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
 
 # summarize test results as "up", "down" or "not expressed"
-dT <- decideTests(fit2, adjust.method="fdr", p.value=0.1)
+dT <- decideTests(fit2, adjust.method="fdr", p.value=0.1) # aquí se cambió el p.value
 
 # Venn diagram of results
 vennDiagram(dT, circle.col=palette())
