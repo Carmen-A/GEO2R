@@ -42,7 +42,7 @@ cont.matrix <- makeContrasts(contrasts=cts, levels=design)
 fit2 <- contrasts.fit(fit, cont.matrix)
 
 # compute statistics and table of top significant genes
-fit2 <- eBayes(fit2, 0.01)
+fit2 <- eBayes(fit2, 2)
 tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250)
 
 tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SPOT_ID"))
@@ -56,7 +56,7 @@ hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
      ylab = "Number of genes", main = "P-adj value distribution")
 
 # summarize test results as "up", "down" or "not expressed"
-dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05)
+dT <- decideTests(fit2, adjust.method="fdr", p.value=0.1)
 
 # Venn diagram of results
 vennDiagram(dT, circle.col=palette())
